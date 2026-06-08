@@ -11,7 +11,7 @@ from nltk.tokenize import word_tokenize
 # This is added here for completeness, in a real deployment, you might pre-download these
 try:
     nltk.data.find('corpora/stopwords')
-except nltk.downloader.DownloadError:
+except LookupError:
     nltk.download('stopwords')
 try:
     nltk.data.find('tokenizers/punkt')
