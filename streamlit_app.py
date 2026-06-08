@@ -6,61 +6,78 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-# Download necessary NLTK data (safe fix)
+# Download required NLTK resources
+nltk.download('stopwords', quiet=True)
+nltk.download('punkt', quiet=True)
+nltk.download('wordnet', quiet=True)
+nltk.download('punkt_tab', quiet=True)
 
+# Page configuration
+st.set_page_config(
+    page_title="IMDB Sentiment Analysis",
+    page_icon="🎬",
+    layout="centered"
+)
+
+# Load model and vectorizer
 try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
+    vectorizer = joblib.load("count_vectorizer.pkl")
+    model = joblib.load("logistic_regression_model.pkl")
+except Exception as e:
+    st.error(f"Error loading model files: {e}")
+    st.stop()
 
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
-
-try:
-    nltk.data.find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet')
-
-# Load the vectorizer and model
-vectorizer = joblib.load('count_vectorizer.pkl')
-model = joblib.load('logistic_regression_model.pkl')
-
-# Initialize NLTK components
+# Initialize NLP tools
 stop_words = set(stopwords.words('english'))
 lemmatizer = WordNetLemmatizer()
 
+# Text preprocessing function
 def preprocess_text(text):
-    # Remove URLs
     text = re.sub(r'http\S+|www\.\S+', '', text)
-    # Remove punctuation and symbols
     text = re.sub(r'[^\w\s]', '', text)
-    # Tokenize
+
     words = word_tokenize(text)
-    # Remove stopwords and lemmatize
+
     processed_words = [
         lemmatizer.lemmatize(word.lower())
         for word in words
         if word.lower() not in stop_words
     ]
+
     return ' '.join(processed_words)
 
-st.title('IMDB Movie Review Sentiment Analysis')
-st.write('Enter a movie review below to classify its sentiment (positive/negative).')
+# UI
+st.title("🎬 IMDB Movie Review Sentiment Analysis")
+st.write("Enter a movie review below and the model will predict whether it is Positive or Negative.")
 
-user_input = st.text_area('Movie Review:', '')
+user_input = st.text_area(
+    "Movie Review",
+    height=200,
+    placeholder="Type or paste your movie review here..."
+)
 
-if st.button('Analyze Sentiment'):
-    if user_input:
-        processed_input = preprocess_text(user_input)
+if st.button("Analyze Sentiment"):
 
-        # Transform the input
-        input_vectorized = vectorizer.transform([processed_input])
-
-        # Predict sentiment
-        prediction = model.predict(input_vectorized)
-
-        st.write(f'Predicted Sentiment: **{prediction[0].capitalize()}**')
+    if not user_input.strip():
+        st.warning("Please enter a movie review.")
     else:
-        st.write('Please enter a review to analyze.')
+        try:
+            processed_input = preprocess_text(user_input)
+
+            input_vectorized = vectorizer.transform([processed_input])
+
+            prediction = model.predict(input_vectorized)[0]
+
+            if prediction.lower() == "positive":
+                st.success("😊 Positive Review")
+            elif prediction.lower() == "negative":
+                st.error("😞 Negative Review")
+            else:
+                st.info(f"Prediction: {prediction}")
+
+        except Exception as e:
+            st.error(f"Prediction Error: {e}")
+
+# Footer
+st.markdown("---")
+st.caption("Built using Streamlit, NLTK, Scikit-learn, and Logistic Regression")
